@@ -1,0 +1,13 @@
+# Copyright 2026 Leedehai.
+
+[package]
+name = "typstlib"
+version = "0.15.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+typst = "0.15.0"
+typst-svg = "0.15.0"

@@ -57,6 +57,9 @@ var webpWasm []byte
 //go:embed wasm/avif.wasm
 var avifWasm []byte
 
+//go:embed wasm/typst.wasm
+var typstWasm []byte
+
 // Header is in both the request and response.
 type Header struct {
 	// Major version of the protocol.
