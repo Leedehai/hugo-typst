@@ -280,10 +280,9 @@ func NewHugoSites(cfg deps.DepsCfg) (*HugoSites, error) {
 			// Katex options.
 			warpc.Options{
 				CompilationCacheDir: compilationCacheDir,
-
-				PoolSize: poolSizeKatex,
-				Infof:    logger.InfoCommand("katex").Logf,
-				Warnf:    logger.WarnCommand("katex").Logf,
+				PoolSize:            poolSizeKatex,
+				Infof:               logger.InfoCommand("katex").Logf,
+				Warnf:               logger.WarnCommand("katex").Logf,
 			},
 			// WebP options.
 			warpc.Options{
@@ -300,6 +299,13 @@ func NewHugoSites(cfg deps.DepsCfg) (*HugoSites, error) {
 				Memory:              imageWasmMemory,
 				Infof:               logger.InfoCommand("avif").Logf,
 				Warnf:               logger.WarnCommand("avif").Logf,
+			},
+			// Typst options.
+			warpc.Options{
+				CompilationCacheDir: compilationCacheDir,
+				PoolSize:            1,
+				Infof:               logger.InfoCommand("typst").Logf,
+				Warnf:               logger.WarnCommand("typst").Logf,
 			},
 		),
 	}

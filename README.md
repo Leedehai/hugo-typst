@@ -2,20 +2,72 @@
 
 Bring [Typst](https://typst.app)'s math prowess to [Hugo](https://gohugo.io/).
 
+> [!NOTE]
+> The repository is kept in a way that makes it easy for me to create a PR to
+> the [Hugo repostory](https://github.com/gohugoio/hugo) at some point.
+> 
+> That said, it also serves as a fork of Hugo. The resulting executable from the
+> build process, `hugo-typst`, can be a drop-in replacement of the official
+> `hugo` executable, and can work with existing Hugo themes and CI/CD workflows
+> of Hugo-built websites. This repository will sync with the Hugo codebase from
+> time to time.
+
 [Typst](https://typst.app) is a new markup-based typesetting system that is
 designed to be as powerful as LaTeX while being much easier to learn and use.
 
-Hugo already supports math in LaTeX. To do so, Hugo embeds
-[Wazero](https://wazero.io/), a WASM runtime for Go program, so that it can run
-the WASM binary of [QuickJS](https://bellard.org/quickjs/), an embedded
-JavaScript engine written in C, and uses that engine to run
+Hugo already supports math in LaTeX. With the help of
+[Wazero](https://wazero.io/), a WebAssembly (WASM) runtime for Go program, Hugo
+can run the WASM module of [QuickJS](https://bellard.org/quickjs/), an embedded
+JavaScript engine written in C. Further, Hugo uses that engine to run
 [KaTeX](https://katex.org/), a LaTeX reimplementation in JavaScript for web.
+As an optimization, [Javy](https://github.com/bytecodealliance/javy) is
+responsible for compiling JavaScript to QuickJS bytecode so that QuickJS does
+not have to parse the text of JavaScript code at Hugo runtime.
 
-To support Typst too, here we use Wazero to run the WASM binary of Typst, which
-is written in Rust. Typst supports many output formats, including for web. This
-project uses Typst to compile math into MathML.
+To support Typst too, here we use Wazero to run the WASM binary (only ~200 KB
+in size) of Typst, which is written in Rust. Typst supports many output formats,
+including for web. This project uses Typst to compile math into
+[MathML](https://developer.mozilla.org/en-US/docs/Web/MathML).
 
-## How to gain the Typst math
+## Integration using RPC
+
+Hugo integrates with WASM modules through the `warpc.go` ("WASM RPC") layer.
+
+With Go's goroutine feature, Hugo maintains a pool of WASM workers (including
+that for Typst) and communicates with them with in-memory JSON-based RPC. Each
+worker deserializes requests received from `stdin`, does its work, and writes
+responses to `stdout`.
+
+Hugo uses this goroutine+RPC architecture instead of making direct function
+calls into WASM modules, in order to bypass the complexity of passing
+input/output as pointers (and managing their memory), and to prevent crashes
+from leaking into Hugo's main process.
+
+## Build
+
+```bash
+# Ensure you have Go and Rust toolchains.
+$ go version
+go version go1.26.4
+$ cargo version
+cargo 1.96.0 (30a34c682 2026-05-25)
+
+# Ensure your Rust toolchain supports cross-compilation to wasm32-wasip1.
+$ rustup target add wasm32-wasip1
+
+# Ensure you have Make.
+$ make --version
+GNU Make 3.81
+
+# Build it.
+$ make
+
+# Find the resulting binary at the project root. Use it just like a normal
+# Hugo binary.
+$ ./hugo-typst version
+```
+
+## Usage
 
 Step 1. As with LaTeX, configure the passthrough, so that Hugo knows
 it needs to send the content between the delimiters to the math renderer
@@ -54,27 +106,28 @@ Step 4. In base template, conditionally include the CSS within the head element:
 TODO
 ```
 
-## Build
+## Reference: Typst CLI usage
+
+MathML output is supported since Typst 0.15 behind feature flag
+`--features html`.
 
 ```bash
-# Clone this repository.
+$ typst compile -f html --features html - -
+```
 
-# Ensure you have Go and Rust toolchains.
-$ go version
-go version go1.26.4
-$ cargo version
-cargo 1.96.0 (30a34c682 2026-05-25)
-
-# Ensure you have Make.
-$ make --version
-GNU Make 3.81
-
-# Build it.
-make
-
-# Find the resulting binary at the project root. Use it
-# just like a normal Hugo binary.
-./hugo-typst version
+This command will bring up `stdin`. Typst `$ E = m c^2 $` and then Ctrl+D to
+end the input stream. Then, Typst will print to `stdout` (with omission and
+formatting):
+```text
+<!DOCTYPE html><html lang="en">
+<head>...
+<style> ... </style>
+</head>
+<body>
+<math display="block">
+  <mi>𝐸</mi><mo>=</mo><mi>𝑚</mi><msup><mi>𝑐</mi><mn>2</mn></msup></math>
+</body>
+</html>
 ```
 
 ## License

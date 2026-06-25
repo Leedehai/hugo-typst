@@ -57,9 +57,6 @@ var webpWasm []byte
 //go:embed wasm/avif.wasm
 var avifWasm []byte
 
-//go:embed wasm/typst.wasm
-var typstWasm []byte
-
 // Header is in both the request and response.
 type Header struct {
 	// Major version of the protocol.
@@ -800,6 +797,7 @@ type Dispatchers struct {
 	katex *lazyDispatcher[KatexInput, KatexOutput]
 	webp  *lazyDispatcher[WebpInput, WebpOutput]
 	avif  *lazyDispatcher[AvifInput, AvifOutput]
+	typst *lazyDispatcher[TypstInput, TypstOutput]
 }
 
 func (d *Dispatchers) Katex() (Dispatcher[KatexInput, KatexOutput], error) {
@@ -812,6 +810,10 @@ func (d *Dispatchers) Webp() (Dispatcher[WebpInput, WebpOutput], error) {
 
 func (d *Dispatchers) Avif() (Dispatcher[AvifInput, AvifOutput], error) {
 	return d.avif.start()
+}
+
+func (d *Dispatchers) Typst() (Dispatcher[TypstInput, TypstOutput], error) {
+	return d.typst.start()
 }
 
 func (d *Dispatchers) NewWepCodec() (*WebpCodec, error) {
@@ -838,6 +840,11 @@ func (d *Dispatchers) Close() error {
 			errs = append(errs, err)
 		}
 	}
+	if d.typst.started {
+		if err := d.typst.dispatcher.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
 	if len(errs) == 0 {
 		return nil
 	}
@@ -847,11 +854,14 @@ func (d *Dispatchers) Close() error {
 // AllDispatchers creates all the dispatchers for the warpc package.
 // Note that the individual dispatchers are started lazily.
 // Remember to call Close on the returned Dispatchers when done.
-func AllDispatchers(katexOpts, webpOpts, avifOpts Options) *Dispatchers {
+func AllDispatchers(katexOpts, webpOpts, avifOpts, typstOpts Options) *Dispatchers {
 	if err := katexOpts.init(); err != nil {
 		panic(err)
 	}
 	if err := webpOpts.init(); err != nil {
+		panic(err)
+	}
+	if err := typstOpts.init(); err != nil {
 		panic(err)
 	}
 	if katexOpts.Runtime.Data == nil {
@@ -863,11 +873,15 @@ func AllDispatchers(katexOpts, webpOpts, avifOpts Options) *Dispatchers {
 
 	webpOpts.Main = Binary{Name: "webp", Data: webpWasm}
 	avifOpts.Main = Binary{Name: "avif", Data: avifWasm}
+	if typstOpts.Main.Data == nil {
+		typstOpts.Main = Binary{Name: "typst", Data: typstWasm}
+	}
 
 	dispatchers := &Dispatchers{
 		katex: &lazyDispatcher[KatexInput, KatexOutput]{opts: katexOpts},
 		webp:  &lazyDispatcher[WebpInput, WebpOutput]{opts: webpOpts},
 		avif:  &lazyDispatcher[AvifInput, AvifOutput]{opts: avifOpts},
+		typst: &lazyDispatcher[TypstInput, TypstOutput]{opts: typstOpts},
 	}
 
 	return dispatchers

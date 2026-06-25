@@ -1,0 +1,98 @@
+// Copyright 2026 Leedehai. All rights reserved.
+
+use serde::{Deserialize, Serialize};
+use serde_json::Deserializer;
+use std::io::{self, Write};
+
+// Following the shape of Header in warpc.go.
+#[derive(Debug, Deserialize)]
+struct RequestHeader {
+    #[serde(default = "default_version")]
+    version: u16,
+    id: u32,
+    #[serde(default)]
+    command: String,
+}
+
+// Following Message[T] in warpc.go, where T is TypstInput.
+#[derive(Debug, Deserialize)]
+struct Request {
+    header: RequestHeader,
+    #[serde(default)]
+    data: TypstInput,
+}
+
+// Following the shape of Header in warpc.go.
+#[derive(Debug, Serialize)]
+struct ResponseHeader {
+    version: u16,
+    id: u32,
+    command: String,
+}
+
+// Following Message[T] in warpc.go, where T is TypstOutput.
+#[derive(Debug, Serialize)]
+struct Response {
+    header: ResponseHeader,
+    data: TypstOutput,
+}
+
+// From typst.go.
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TypstInput {
+    expression: String,
+    #[serde(default)]
+    options: TypstOptions,
+}
+
+// From typst.go.
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TypstOptions {
+    output: String,
+    display_mode: bool,
+}
+
+// From typst.go.
+#[derive(Debug, Serialize)]
+struct TypstOutput {
+    output: String,
+}
+
+fn default_version() -> u16 {
+    1
+}
+
+fn compile_to_mathml(request: Request) -> Response {
+    let output = "<math display=\"block\"><mrow><mi>E</mi></mrow></math>".to_string();
+    Response {
+        header: ResponseHeader {
+            version: request.header.version,
+            id: request.header.id,
+            command: request.header.command,
+        },
+        data: TypstOutput { output },
+    }
+}
+
+fn main() {
+    let stdin = io::stdin();
+    let stdout = io::stdout();
+    let reader = stdin.lock();
+    let mut writer = io::BufWriter::new(stdout.lock());
+    let stream = Deserializer::from_reader(reader).into_iter::<Request>();
+
+    for request in stream {
+        match request {
+            Ok(request) => {
+                let response = compile_to_mathml(request);
+                if serde_json::to_writer(&mut writer, &response).is_ok() {
+                    let _ = writer.write_all(b"\n");
+                    let _ = writer.flush();
+                }
+            }
+            Err(_) => break,
+        }
+    }
+}
