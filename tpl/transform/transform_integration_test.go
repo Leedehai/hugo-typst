@@ -157,7 +157,7 @@ Scar,"a "dead cat",11
 	`)
 }
 
-func TestToMath(t *testing.T) {
+func TestToMathLatex(t *testing.T) {
 	files := `
 -- hugo.toml --
 disableKinds = ['page','rss','section','sitemap','taxonomy','term']
@@ -168,6 +168,34 @@ disableKinds = ['page','rss','section','sitemap','taxonomy','term']
 
 	b.AssertFileContent("public/index.html", `
 <span class="katex"><math
+	`)
+}
+
+func TestToMathLatexExplicit(t *testing.T) {
+	files := `
+-- hugo.toml --
+disableKinds = ['page','rss','section','sitemap','taxonomy','term']
+-- layouts/home.html --
+{{ transform.ToMath "c = \\pm\\sqrt{a^2 + b^2}" (dict "type" "latex") }}
+  `
+	b := hugolib.Test(t, files)
+
+	b.AssertFileContent("public/index.html", `
+<span class="katex"><math
+	`)
+}
+
+func TestToMathTypst(t *testing.T) {
+	files := `
+-- hugo.toml --
+disableKinds = ['page','rss','section','sitemap','taxonomy','term']
+-- layouts/home.html --
+{{ transform.ToMath "c = \\pm\\sqrt{a^2 + b^2}" (dict "type" "typst") }}
+  `
+	b := hugolib.Test(t, files)
+
+	b.AssertFileContent("public/index.html", `
+<math display="block">
 	`)
 }
 

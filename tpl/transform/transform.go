@@ -252,8 +252,7 @@ func (ns *Namespace) PortableText(v any) (string, error) {
 	return buf.String(), nil
 }
 
-// ToMath converts a LaTeX string to math in the given format, default MathML.
-// This uses KaTeX to render the math, see https://katex.org/.
+// ToMath converts a math string to math in the given format, default MathML.
 func (ns *Namespace) ToMath(ctx context.Context, args ...any) (template.HTML, error) {
 	if len(args) < 1 {
 		return "", errors.New("must provide at least one argument")
@@ -263,6 +262,36 @@ func (ns *Namespace) ToMath(ctx context.Context, args ...any) (template.HTML, er
 		return "", err
 	}
 
+	mathType := "latex"
+	var options map[string]any = nil
+	if len(args) > 1 {
+		if err := mapstructure.Decode(args[1], &options); err != nil {
+			return "", err
+		}
+
+		if val, exists := options["type"]; exists {
+			if strVal, isString := val.(string); isString {
+				mathType = strVal
+			}
+			delete(options, "type")
+		}
+	}
+	switch mathType {
+	case "latex":
+		return ns.ToMathLatex(ctx, expression, options)
+	case "typst":
+		return ns.ToMathTypst(ctx, expression, options)
+	default:
+		return "", fmt.Errorf("unknown math expression type: %q", mathType)
+	}
+}
+
+// This renders LaTeX math, with the KaTeX library. See https://katex.org/.
+func (ns *Namespace) ToMathLatex(
+	ctx context.Context,
+	expression string,
+	options map[string]any,
+) (template.HTML, error) {
 	katexInput := warpc.KatexInput{
 		Expression: expression,
 		Options: warpc.KatexOptions{
@@ -274,8 +303,8 @@ func (ns *Namespace) ToMath(ctx context.Context, args ...any) (template.HTML, er
 		},
 	}
 
-	if len(args) > 1 {
-		if err := mapstructure.WeakDecode(args[1], &katexInput.Options); err != nil {
+	if options != nil {
+		if err := mapstructure.WeakDecode(options, &katexInput.Options); err != nil {
 			return "", err
 		}
 	}
@@ -295,7 +324,7 @@ func (ns *Namespace) ToMath(ctx context.Context, args ...any) (template.HTML, er
 
 	const fileCacheEntryVersion = "v1" // Increment on incompatible changes.
 
-	s := hashing.HashString(args...)
+	s := hashing.HashString(expression, options)
 	key := "tomath/" + fileCacheEntryVersion + "/" + s[:2] + "/" + s[2:]
 	fileCache := ns.deps.ResourceSpec.FileCaches.MiscCache()
 
@@ -343,6 +372,92 @@ func (ns *Namespace) ToMath(ctx context.Context, args ...any) (template.HTML, er
 
 		for _, warning := range e.Warnings {
 			ns.deps.Log.Warnf("transform.ToMath: %s", warning)
+		}
+
+		return template.HTML(e.Output), err
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return v, nil
+}
+
+// This renders Typst math, with the Typst library. See https://typst.app/.
+func (ns *Namespace) ToMathTypst(
+	ctx context.Context,
+	expression string,
+	options map[string]any,
+) (template.HTML, error) {
+	typstInput := warpc.TypstInput{
+		Expression: expression,
+		Options: warpc.TypstOptions{
+			Output:      "mathml",
+			DisplayMode: true,
+		},
+	}
+
+	if options != nil {
+		if err := mapstructure.WeakDecode(options, &typstInput.Options); err != nil {
+			return "", err
+		}
+	}
+
+	type fileCacheEntry struct {
+		Version  string   `json:"version"`
+		Output   string   `json:"output"`
+		Warnings []string `json:"warnings,omitempty"`
+	}
+
+	const fileCacheEntryVersion = "v1" // Increment on incompatible changes.
+	s := hashing.HashString(expression, options)
+	key := "tomath/typst/" + fileCacheEntryVersion + "/" + s[:2] + "/" + s[2:]
+	fileCache := ns.deps.ResourceSpec.FileCaches.MiscCache()
+
+	v, err := ns.cacheMath.GetOrCreate(key, func(string) (template.HTML, error) {
+		_, r, err := fileCache.GetOrCreate(key, func() (io.ReadCloser, error) {
+			message := warpc.Message[warpc.TypstInput]{
+				Header: warpc.Header{
+					Version: 1,
+					ID:      ns.id.Add(1),
+				},
+				Data: typstInput,
+			}
+
+			t, err := ns.deps.WasmDispatchers.Typst()
+			if err != nil {
+				return nil, err
+			}
+			result, err := t.Execute(ctx, message)
+			if err != nil {
+				return nil, err
+			}
+
+			e := fileCacheEntry{
+				Version:  fileCacheEntryVersion,
+				Output:   result.Data.Output,
+				Warnings: result.Header.Warnings,
+			}
+
+			buf := &bytes.Buffer{}
+			enc := json.NewEncoder(buf)
+			enc.SetEscapeHTML(false)
+			if err := enc.Encode(e); err != nil {
+				return nil, fmt.Errorf("failed to encode file cache entry: %w", err)
+			}
+			return hugio.NewReadSeekerNoOpCloserFromBytes(buf.Bytes()), nil
+		})
+		if err != nil {
+			return "", err
+		}
+
+		var e fileCacheEntry
+		if err := json.NewDecoder(r).Decode(&e); err != nil {
+			return "", fmt.Errorf("failed to decode file cache entry: %w", err)
+		}
+
+		for _, warning := range e.Warnings {
+			ns.deps.Log.Warnf("transform.ToMathTypst: %s", warning)
 		}
 
 		return template.HTML(e.Output), err

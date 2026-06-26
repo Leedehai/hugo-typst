@@ -67,6 +67,16 @@ $ make
 $ ./hugo-typst version
 ```
 
+## Test
+
+```bash
+# Run math-related tests.
+make test-math
+
+# Run all tests in Hugo.
+make test-all
+```
+
 ## Usage
 
 Step 1. As with LaTeX, configure the passthrough, so that Hugo knows
@@ -115,9 +125,10 @@ MathML output is supported since Typst 0.15 behind feature flag
 $ typst compile -f html --features html - -
 ```
 
-This command will bring up `stdin`. Typst `$ E = m c^2 $` and then Ctrl+D to
-end the input stream. Then, Typst will print to `stdout` (with omission and
-formatting):
+This command will bring up `stdin`. Type `$ E = m c^2 $`, and then Ctrl+D to
+end the input stream. Then, Typst will print to `stdout` with something like
+this (with omission and formatting):
+
 ```text
 <!DOCTYPE html><html lang="en">
 <head>...
