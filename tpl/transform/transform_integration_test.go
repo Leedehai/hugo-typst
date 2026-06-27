@@ -190,16 +190,13 @@ func TestToMathTypst(t *testing.T) {
 -- hugo.toml --
 disableKinds = ['page','rss','section','sitemap','taxonomy','term']
 -- layouts/home.html --
-{{ transform.ToMath "c = \\pm\\sqrt{a^2 + b^2}" (dict "type" "typst") }}
-  `
+{{ transform.ToMath "c = plus.minus sqrt(a^2 + b^2)" (dict "type" "typst") }}`
 	b := hugolib.Test(t, files)
 
-	b.AssertFileContent("public/index.html", `
-<math display="block">
-	`)
+	b.AssertFileContentEquals("public/index.html", `<math display="block"><mi>𝑐</mi><mo>=</mo><mo form="prefix">±</mo><msqrt><msup><mi>𝑎</mi><mn>2</mn></msup><mo>+</mo><msup><mi>𝑏</mi><mn>2</mn></msup></msqrt></math>`)
 }
 
-func TestToMathError(t *testing.T) {
+func TestToMathLatexError(t *testing.T) {
 	t.Run("Default", func(t *testing.T) {
 		files := `
 -- hugo.toml --
@@ -265,6 +262,74 @@ disableKinds = ['page','rss','section','sitemap','taxonomy','term']
 		b.Assert(err, qt.IsNotNil)
 		b.Assert(err.Error(), qt.Contains, "the return type of transform.ToMath was changed in Hugo v0.141.0 and the error handling replaced with a new try keyword, see https://gohugo.io/functions/go-template/try/")
 	})
+}
+
+func TestToMathTypstError(t *testing.T) {
+	// t.Run("Default", func(t *testing.T) {
+	// 	files := `
+	// -- hugo.toml --
+	// disableKinds = ['page','rss','section','sitemap','taxonomy','term']
+	// -- layouts/home.html --
+	// {{  transform.ToMath "c = plus.minus foo(a^2 + b^2)" (dict "type" "typst") }}
+	//   `
+	// 	b, err := hugolib.TestE(t, files, hugolib.TestOptWarn())
+
+	// 	b.Assert(err, qt.IsNotNil)
+	// 	b.Assert(err.Error(), qt.Contains, "KaTeX parse error: Undefined control sequence: \\foo")
+	// })
+
+	// 	t.Run("Disable ThrowOnError", func(t *testing.T) {
+	// 		files := `
+	// -- hugo.toml --
+	// disableKinds = ['page','rss','section','sitemap','taxonomy','term']
+	// -- layouts/home.html --
+	// {{ $opts := dict "throwOnError" false }}
+	// {{  transform.ToMath "c = \\foo{a^2 + b^2}" $opts }}
+	//   `
+	// 		b, err := hugolib.TestE(t, files, hugolib.TestOptWarn())
+
+	// 		b.Assert(err, qt.IsNil)
+	// 		b.AssertFileContent("public/index.html", `#cc0000`) // Error color
+	// 	})
+
+	// 	t.Run("Handle in template", func(t *testing.T) {
+	// 		files := `
+	// -- hugo.toml --
+	// disableKinds = ['page','rss','section','sitemap','taxonomy','term']
+	// -- layouts/home.html --
+	// {{ with try (transform.ToMath "c = \\foo{a^2 + b^2}") }}
+	// 	{{ with .Err }}
+	// 	 	{{ warnf "error: %s" . }}
+	// 	{{ else }}
+	// 		{{ .Value }}
+	// 	{{ end }}
+	// {{ end }}
+	//   `
+	// 		b, err := hugolib.TestE(t, files, hugolib.TestOptWarn())
+
+	// 		b.Assert(err, qt.IsNil)
+	// 		b.AssertLogContains("WARN  error: template: home.html:1:22: executing \"home.html\" at <transform.ToMath>: error calling ToMath: KaTeX parse error: Undefined control sequence: \\foo at position 5: c = \\̲f̲o̲o̲{a^2 + b^2}")
+	// 	})
+
+	// 	// See issue 13239.
+	// 	t.Run("Handle in template, old Err construct", func(t *testing.T) {
+	// 		files := `
+	// -- hugo.toml --
+	// disableKinds = ['page','rss','section','sitemap','taxonomy','term']
+	// -- layouts/home.html --
+	// {{ with transform.ToMath "c = \\pm\\sqrt{a^2 + b^2}" }}
+	// 	{{ with .Err }}
+	// 	 	{{ warnf "error: %s" . }}
+	// 	{{ else }}
+	// 		{{ . }}
+	// 	{{ end }}
+	// {{ end }}
+	//   `
+	// 		b, err := hugolib.TestE(t, files, hugolib.TestOptWarn())
+
+	//		b.Assert(err, qt.IsNotNil)
+	//		b.Assert(err.Error(), qt.Contains, "the return type of transform.ToMath was changed in Hugo v0.141.0 and the error handling replaced with a new try keyword, see https://gohugo.io/functions/go-template/try/")
+	//	})
 }
 
 func TestToMathBigAndManyExpressions(t *testing.T) {

@@ -4,6 +4,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Deserializer;
 use std::io::{self, Write};
 
+pub mod run;
+pub mod world;
+
+use run::{OutputFormat, compile};
+use world::MathWorld;
+
 // Following the shape of Header in warpc.go.
 #[derive(Debug, Deserialize)]
 struct RequestHeader {
@@ -51,7 +57,7 @@ struct TypstInput {
 #[serde(rename_all = "camelCase")]
 struct TypstOptions {
     output: String,
-    display_mode: bool,
+    block: bool,
 }
 
 // From typst.go.
@@ -65,7 +71,15 @@ fn default_version() -> u16 {
 }
 
 fn compile_to_mathml(request: Request) -> Response {
-    let output = "<math display=\"block\"><mrow><mi>E</mi></mrow></math>".to_string();
+    let text = if request.data.options.block {
+        format!("$ {} $", request.data.expression)
+    } else {
+        format!("${}$", request.data.expression.trim())
+    };
+
+    let world = MathWorld::new(text);
+    let output = compile(world, OutputFormat::Html);
+    // let output = "<math display=\"block\"><mrow><mi>E</mi></mrow></math>".to_string();
     Response {
         header: ResponseHeader {
             version: request.header.version,
@@ -75,6 +89,34 @@ fn compile_to_mathml(request: Request) -> Response {
         data: TypstOutput { output },
     }
 }
+
+// pub fn typst_to_mathml(math_expr: &str) -> Result<String, String> {
+//     // 1. Wrap the expression in Typst math mode delimiters
+//     let source_text = format!("$ {} $", math_expr);
+
+//     // 2. Initialize the mocked World
+//     let world = MathWorld::new(&source_text);
+
+//     // 3. Compile the source into a Typst Document
+//     let mut tracer = typst::eval::Tracer::new();
+//     let document = typst::compile(&world, &mut tracer)
+//         .map_err(|e| format!("Typst compilation failed: {:?}", e))?;
+
+//     // 4. Export the compiled document to HTML.
+//     // Typst's HTML engine natively converts equation nodes into structured MathML.
+//     let html_output = typst_html::html(&document);
+
+//     // 5. Extract the `<math>` element from the resulting HTML string
+//     let start = html_output
+//         .find("<math")
+//         .ok_or("No MathML block generated.")?;
+//     let end = html_output
+//         .find("</math>")
+//         .ok_or("Malformed HTML output.")?
+//         + 7;
+
+//     Ok(html_output[start..end].to_string())
+// }
 
 fn main() {
     let stdin = io::stdin();

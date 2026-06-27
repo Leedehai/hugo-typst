@@ -20,7 +20,7 @@ type TypstOptions struct {
 	Output string `json:"output"`
 
 	// If true, display math in display mode, false in inline mode.
-	DisplayMode bool `json:"displayMode"`
+	Block bool `json:"block"`
 }
 
 type TypstOutput struct {

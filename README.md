@@ -24,10 +24,18 @@ As an optimization, [Javy](https://github.com/bytecodealliance/javy) is
 responsible for compiling JavaScript to QuickJS bytecode so that QuickJS does
 not have to parse the text of JavaScript code at Hugo runtime.
 
-To support Typst too, here we use Wazero to run the WASM binary (only ~200 KB
-in size) of Typst, which is written in Rust. Typst supports many output formats,
-including for web. This project uses Typst to compile math into
+To support Typst too, here we use Wazero to run the WASM binary of Typst, which
+is written in Rust. Typst supports many output formats, including for web. This
+project uses Typst to compile math into
 [MathML](https://developer.mozilla.org/en-US/docs/Web/MathML).
+
+## Current state
+
+- [x] Add Typst WASM, RPC integration
+- [x] :tada: (MVP) Compile to MathML, happy path
+- [ ] MathML diagnostics
+- [ ] MathML rendering with CSS stylesheets
+- [ ] (maybe) Compile to SVG?
 
 ## Integration using RPC
 
