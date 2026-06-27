@@ -11,19 +11,21 @@ typst-wasm:
 	@printf "\033[32;1m> Building Typst WASM..\n\033[0m"
 	@$(MAKE) -C $(TYPST_SOURCE_CARGO_DIR) $(TYPST_WASM_BIN_ABSPATH)
 
-hugo-typst: $(TYPST_WASM_BIN_ABSPATH)
+hugo-typst: typst-wasm
 	@printf "\033[32;1m> Building Hugo..\n\033[0m"
 	CGO_ENABLED=1 go build -buildvcs=false -o $@ -tags extended
 
 test-math: hugo-typst
+	@printf "\033[32;1m> Testing math..\n\033[0m"
 	go test ./tpl/transform/...
 
 test-all: hugo-typst
+	@printf "\033[32;1m> Testing all..\n\033[0m"
 	go test ./...
 
 format:
 	git diff --name-only | grep '\.rs$$' | xargs -r rustfmt
-	git diff --name-only | grep '\.go$$' | xargs -r go fmt
+	git diff --name-only | grep '\.go$$' | xargs -r gofmt -w
 
 clean:
 	@$(MAKE) -C $(TYPST_SOURCE_CARGO_DIR) clean

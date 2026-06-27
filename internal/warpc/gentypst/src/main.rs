@@ -4,6 +4,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Deserializer;
 use std::io::{self, Write};
 
+pub mod run;
+pub mod world;
+
+use run::{OutputFormat, compile};
+use world::MathWorld;
+
 // Following the shape of Header in warpc.go.
 #[derive(Debug, Deserialize)]
 struct RequestHeader {
@@ -51,7 +57,7 @@ struct TypstInput {
 #[serde(rename_all = "camelCase")]
 struct TypstOptions {
     output: String,
-    display_mode: bool,
+    block: bool,
 }
 
 // From typst.go.
@@ -65,14 +71,22 @@ fn default_version() -> u16 {
 }
 
 fn compile_to_mathml(request: Request) -> Response {
-    let output = "<math display=\"block\"><mrow><mi>E</mi></mrow></math>".to_string();
+    let text = if request.data.options.block {
+        format!("$ {} $", request.data.expression)
+    } else {
+        format!("${}$", request.data.expression.trim())
+    };
+
+    let world = MathWorld::new(text);
+    let html = compile(world, OutputFormat::Html);
+    // let output = "<math display=\"block\"><mrow><mi>E</mi></mrow></math>".to_string();
     Response {
         header: ResponseHeader {
             version: request.header.version,
             id: request.header.id,
             command: request.header.command,
         },
-        data: TypstOutput { output },
+        data: TypstOutput { output: html },
     }
 }
 

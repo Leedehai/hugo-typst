@@ -392,8 +392,8 @@ func (ns *Namespace) ToMathTypst(
 	typstInput := warpc.TypstInput{
 		Expression: expression,
 		Options: warpc.TypstOptions{
-			Output:      "mathml",
-			DisplayMode: true,
+			Output: "mathml",
+			Block:  true,
 		},
 	}
 
