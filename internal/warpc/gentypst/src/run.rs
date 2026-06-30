@@ -43,16 +43,21 @@ fn compile_to_html(world: MathWorld) -> String {
     html
 }
 
-macro_rules! typst_error {
+macro_rules! typst_error_html {
     ($fmt:literal $(, $($arg:tt)*)?) => {{
-        let inner = format!($fmt $(, $($arg)*)?);
-        format!("<span class='typst-error'>typst: {inner}</span>")
+        let inner = format!($fmt $(, $($arg)*)?)
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("&", "&amp;")
+            .replace("\"", "&quot;")
+            .replace("'", "&apos;");
+        format!("<pre class='typst-error' style='display: inline;'>typst: {inner}</pre>")
     }};
 }
 
 #[cold]
 fn error_html_encoding() -> String {
-    typst_error!("html encoding error<")
+    typst_error_html!("html encoding error")
 }
 
 #[cold]
@@ -61,14 +66,17 @@ fn compile_diags(diags: &EcoVec<SourceDiagnostic>, world: &dyn DiagnosticWorld) 
     // We need to use DiagnosticFormat::Short instead of richer variants, since
     // HTML rendering does not respect whitespaces well.
     match emit(&mut buffer, world, diags, DiagnosticFormat::Short) {
-        Ok(_) => String::from_utf8(buffer.into_inner()).unwrap_or_default(),
+        Ok(_) => {
+            let e = String::from_utf8(buffer.into_inner()).unwrap_or_default();
+            typst_error_html!("{e}")
+        }
         Err(e) => {
-            typst_error!("error when emitting compiler diagnostics: {e}")
+            typst_error_html!("error when emitting compiler diagnostics: {e}")
         }
     }
 }
 
 #[cold]
 fn error_no_math_node() -> String {
-    typst_error!("no math node in generated HTML")
+    typst_error_html!("no math node in generated HTML")
 }

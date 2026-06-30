@@ -33,7 +33,7 @@ project uses Typst to compile math into
 
 - [x] Add Typst WASM, RPC integration
 - [x] :tada: (MVP) Compile to MathML, happy path
-- [ ] MathML diagnostics
+- [x] MathML diagnostics
 - [ ] MathML rendering with CSS stylesheets
 - [ ] (maybe) Compile to SVG?
 

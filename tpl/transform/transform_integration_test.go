@@ -265,71 +265,17 @@ disableKinds = ['page','rss','section','sitemap','taxonomy','term']
 }
 
 func TestToMathTypstError(t *testing.T) {
-	// t.Run("Default", func(t *testing.T) {
-	// 	files := `
-	// -- hugo.toml --
-	// disableKinds = ['page','rss','section','sitemap','taxonomy','term']
-	// -- layouts/home.html --
-	// {{  transform.ToMath "c = plus.minus foo(a^2 + b^2)" (dict "type" "typst") }}
-	//   `
-	// 	b, err := hugolib.TestE(t, files, hugolib.TestOptWarn())
+	t.Run("Default", func(t *testing.T) {
+		files := `
+-- hugo.toml --
+disableKinds = ['page','rss','section','sitemap','taxonomy','term']
+-- layouts/home.html --
+{{ transform.ToMath "c = plus.minus foo(a^2 + b^2)" (dict "type" "typst") }}`
+		b, err := hugolib.TestE(t, files, hugolib.TestOptWarn())
 
-	// 	b.Assert(err, qt.IsNotNil)
-	// 	b.Assert(err.Error(), qt.Contains, "KaTeX parse error: Undefined control sequence: \\foo")
-	// })
-
-	// 	t.Run("Disable ThrowOnError", func(t *testing.T) {
-	// 		files := `
-	// -- hugo.toml --
-	// disableKinds = ['page','rss','section','sitemap','taxonomy','term']
-	// -- layouts/home.html --
-	// {{ $opts := dict "throwOnError" false }}
-	// {{  transform.ToMath "c = \\foo{a^2 + b^2}" $opts }}
-	//   `
-	// 		b, err := hugolib.TestE(t, files, hugolib.TestOptWarn())
-
-	// 		b.Assert(err, qt.IsNil)
-	// 		b.AssertFileContent("public/index.html", `#cc0000`) // Error color
-	// 	})
-
-	// 	t.Run("Handle in template", func(t *testing.T) {
-	// 		files := `
-	// -- hugo.toml --
-	// disableKinds = ['page','rss','section','sitemap','taxonomy','term']
-	// -- layouts/home.html --
-	// {{ with try (transform.ToMath "c = \\foo{a^2 + b^2}") }}
-	// 	{{ with .Err }}
-	// 	 	{{ warnf "error: %s" . }}
-	// 	{{ else }}
-	// 		{{ .Value }}
-	// 	{{ end }}
-	// {{ end }}
-	//   `
-	// 		b, err := hugolib.TestE(t, files, hugolib.TestOptWarn())
-
-	// 		b.Assert(err, qt.IsNil)
-	// 		b.AssertLogContains("WARN  error: template: home.html:1:22: executing \"home.html\" at <transform.ToMath>: error calling ToMath: KaTeX parse error: Undefined control sequence: \\foo at position 5: c = \\̲f̲o̲o̲{a^2 + b^2}")
-	// 	})
-
-	// 	// See issue 13239.
-	// 	t.Run("Handle in template, old Err construct", func(t *testing.T) {
-	// 		files := `
-	// -- hugo.toml --
-	// disableKinds = ['page','rss','section','sitemap','taxonomy','term']
-	// -- layouts/home.html --
-	// {{ with transform.ToMath "c = \\pm\\sqrt{a^2 + b^2}" }}
-	// 	{{ with .Err }}
-	// 	 	{{ warnf "error: %s" . }}
-	// 	{{ else }}
-	// 		{{ . }}
-	// 	{{ end }}
-	// {{ end }}
-	//   `
-	// 		b, err := hugolib.TestE(t, files, hugolib.TestOptWarn())
-
-	//		b.Assert(err, qt.IsNotNil)
-	//		b.Assert(err.Error(), qt.Contains, "the return type of transform.ToMath was changed in Hugo v0.141.0 and the error handling replaced with a new try keyword, see https://gohugo.io/functions/go-template/try/")
-	//	})
+		b.Assert(err, qt.IsNil)
+		b.AssertFileContent("public/index.html", `typst: ToMath:1:17: error: unknown variable: foo`)
+	})
 }
 
 func TestToMathBigAndManyExpressions(t *testing.T) {
