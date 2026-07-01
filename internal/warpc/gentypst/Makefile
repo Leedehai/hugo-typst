@@ -14,7 +14,7 @@ E2E_OUT_HTML := e2e/out/index.html
 E2E_EXP_HTML := e2e/expected/index.html
 define test_e2e
 	rm -rf e2e/out
-	$(HUGO_TYPST_BIN_ABSPATH) build --source e2e --quiet
+	$(HUGO_TYPST_BIN_ABSPATH) build --ignoreCache --source e2e --quiet
 	if diff -q $(E2E_OUT_HTML) $(E2E_EXP_HTML) > /dev/null; then \
 		echo "End-to-end test passed: $(E2E_OUT_HTML) == $(E2E_EXP_HTML)"; \
 	else \

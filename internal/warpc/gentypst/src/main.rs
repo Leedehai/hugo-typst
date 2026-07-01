@@ -7,39 +7,36 @@ use std::io::{self, Write};
 pub mod run;
 pub mod world;
 
-use run::{OutputFormat, compile};
+use run::{OutputFormat, SuccessCompileResult, compile};
 use world::MathWorld;
 
 // Following the shape of Header in warpc.go.
-#[derive(Debug, Deserialize)]
-struct RequestHeader {
+#[derive(Debug, Deserialize, Serialize)]
+struct Header {
     #[serde(default = "default_version")]
     version: u16,
+    #[serde(default)]
     id: u32,
     #[serde(default)]
     command: String,
+    #[serde(default)]
+    err: String,
+    #[serde(default)]
+    warnings: Vec<String>,
 }
 
 // Following Message[T] in warpc.go, where T is TypstInput.
 #[derive(Debug, Deserialize)]
 struct Request {
-    header: RequestHeader,
+    header: Header,
     #[serde(default)]
     data: TypstInput,
-}
-
-// Following the shape of Header in warpc.go.
-#[derive(Debug, Serialize)]
-struct ResponseHeader {
-    version: u16,
-    id: u32,
-    command: String,
 }
 
 // Following Message[T] in warpc.go, where T is TypstOutput.
 #[derive(Debug, Serialize)]
 struct Response {
-    header: ResponseHeader,
+    header: Header,
     data: TypstOutput,
 }
 
@@ -56,7 +53,6 @@ struct TypstInput {
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct TypstOptions {
-    output: String,
     block: bool,
 }
 
@@ -78,15 +74,27 @@ fn compile_to_mathml(request: Request) -> Response {
     };
 
     let world = MathWorld::new(text);
-    let html = compile(world, OutputFormat::Html);
-    // let output = "<math display=\"block\"><mrow><mi>E</mi></mrow></math>".to_string();
-    Response {
-        header: ResponseHeader {
-            version: request.header.version,
-            id: request.header.id,
-            command: request.header.command,
+    let base_header = Header {
+        version: request.header.version,
+        id: request.header.id,
+        command: request.header.command,
+        err: String::new(),
+        warnings: vec![],
+    };
+    match compile(world, OutputFormat::Html) {
+        Ok(SuccessCompileResult { html, warnings }) => Response {
+            header: Header {
+                warnings,
+                ..base_header
+            },
+            data: TypstOutput { output: html },
         },
-        data: TypstOutput { output: html },
+        Err(err) => Response {
+            header: Header { err, ..base_header },
+            data: TypstOutput {
+                output: String::new(),
+            },
+        },
     }
 }
 

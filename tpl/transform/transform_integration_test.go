@@ -273,8 +273,27 @@ disableKinds = ['page','rss','section','sitemap','taxonomy','term']
 {{ transform.ToMath "c = plus.minus foo(a^2 + b^2)" (dict "type" "typst") }}`
 		b, err := hugolib.TestE(t, files, hugolib.TestOptWarn())
 
+		b.Assert(err, qt.IsNotNil)
+		b.Assert(err.Error(), qt.Contains, `typst: <input>:1:17: error: unknown variable: foo`)
+	})
+
+	t.Run("Handle in template", func(t *testing.T) {
+		files := `
+-- hugo.toml --
+disableKinds = ['page','rss','section','sitemap','taxonomy','term']
+-- layouts/home.html --
+{{ with try (transform.ToMath "c = plus.minus foo(a^2 + b^2)" (dict "type" "typst")) }}
+	{{ with .Err }}
+	 	{{ warnf "error: %s" . }}
+	{{ else }}
+		{{ .Value }}
+	{{ end }}
+{{ end }}
+  `
+		b, err := hugolib.TestE(t, files, hugolib.TestOptWarn())
+
 		b.Assert(err, qt.IsNil)
-		b.AssertFileContent("public/index.html", `typst: ToMath:1:17: error: unknown variable: foo`)
+		b.AssertLogContains("WARN  error: template: home.html:1:22: executing \"home.html\" at <transform.ToMath>: error calling ToMath: typst: <input>:1:17: error: unknown variable: foo\n")
 	})
 }
 

@@ -14,7 +14,14 @@ pub enum OutputFormat {
     Svg,
 }
 
-pub fn compile(world: MathWorld, output_format: OutputFormat) -> String {
+pub struct SuccessCompileResult {
+    pub html: String,
+    pub warnings: Vec<String>,
+}
+
+type CompileResult = Result<SuccessCompileResult, String>;
+
+pub fn compile(world: MathWorld, output_format: OutputFormat) -> CompileResult {
     match output_format {
         OutputFormat::Html => compile_to_html(world),
         OutputFormat::Svg => todo!("not implemented: OutputFormat::Svg"),
@@ -23,41 +30,40 @@ pub fn compile(world: MathWorld, output_format: OutputFormat) -> String {
 
 static MATH_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"<math.*>.*<\/math>").unwrap());
 
-fn compile_to_html(world: MathWorld) -> String {
-    let Warned { output, .. } = typst::compile::<HtmlDocument>(&world);
+macro_rules! typst_diag {
+    ($fmt:literal $(, $($arg:tt)*)?) => {{
+        let inner = format!($fmt $(, $($arg)*)?);
+        format!("typst: {inner}")
+    }};
+}
 
-    let html = match output {
+fn compile_to_html(world: MathWorld) -> CompileResult {
+    let Warned { output, warnings } = typst::compile::<HtmlDocument>(&world);
+
+    match output {
         Ok(doc) => match html(&doc, &HtmlOptions { pretty: false }) {
             Ok(full_html) => {
                 if let Some(m) = MATH_REGEX.find(&full_html) {
-                    format!("{}", m.as_str())
+                    Ok(SuccessCompileResult {
+                        html: format!("{}", m.as_str()),
+                        warnings: warnings
+                            .iter()
+                            .map(|diag| typst_diag!("{}", diag.message.to_string()))
+                            .collect(),
+                    })
                 } else {
-                    error_no_math_node()
+                    Err(error_no_math_node())
                 }
             }
-            Err(_) => error_html_encoding(),
+            Err(_) => Err(error_html_encoding()),
         },
-        Err(errors) => compile_diags(&errors, &world),
-    };
-
-    html
-}
-
-macro_rules! typst_error_html {
-    ($fmt:literal $(, $($arg:tt)*)?) => {{
-        let inner = format!($fmt $(, $($arg)*)?)
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("&", "&amp;")
-            .replace("\"", "&quot;")
-            .replace("'", "&apos;");
-        format!("<pre class='typst-error' style='display: inline;'>typst: {inner}</pre>")
-    }};
+        Err(errors) => Err(compile_diags(&errors, &world)),
+    }
 }
 
 #[cold]
 fn error_html_encoding() -> String {
-    typst_error_html!("html encoding error")
+    typst_diag!("html encoding error")
 }
 
 #[cold]
@@ -68,15 +74,15 @@ fn compile_diags(diags: &EcoVec<SourceDiagnostic>, world: &dyn DiagnosticWorld) 
     match emit(&mut buffer, world, diags, DiagnosticFormat::Short) {
         Ok(_) => {
             let e = String::from_utf8(buffer.into_inner()).unwrap_or_default();
-            typst_error_html!("{e}")
+            typst_diag!("{e}")
         }
         Err(e) => {
-            typst_error_html!("error when emitting compiler diagnostics: {e}")
+            typst_diag!("error when emitting compiler diagnostics: {e}")
         }
     }
 }
 
 #[cold]
 fn error_no_math_node() -> String {
-    typst_error_html!("no math node in generated HTML")
+    typst_diag!("no math node in generated HTML")
 }

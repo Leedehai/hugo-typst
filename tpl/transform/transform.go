@@ -457,7 +457,7 @@ func (ns *Namespace) ToMathTypst(
 		}
 
 		for _, warning := range e.Warnings {
-			ns.deps.Log.Warnf("transform.ToMathTypst: %s", warning)
+			ns.deps.Log.Warnf("transform.ToMath: %s", warning)
 		}
 
 		return template.HTML(e.Output), err

@@ -33,7 +33,7 @@ project uses Typst to compile math into
 
 - [x] Add Typst WASM, RPC integration
 - [x] :tada: (MVP) Compile to MathML, happy path
-- [ ] MathML diagnostics
+- [x] MathML diagnostics
 - [ ] Typst package global imports (e.g. [physica](https://github.com/Leedehai/typst-physics))
 - [ ] MathML rendering with CSS stylesheets
 - [ ] (maybe) Compile to SVG?

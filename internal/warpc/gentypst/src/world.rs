@@ -12,7 +12,7 @@ use typst::{Feature, Library, LibraryExt, World};
 use typst_kit::datetime::Time;
 use typst_kit::diagnostics::DiagnosticWorld;
 
-const INPUT_FILENAME_PLACEHOLDER: &'static str = "ToMath"; // Don't include "<>"
+const INPUT_FILENAME_PLACEHOLDER: &'static str = "<input>";
 
 pub struct MathWorld {
     base: &'static MathWorldBase,
