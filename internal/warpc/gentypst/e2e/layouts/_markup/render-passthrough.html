@@ -1,0 +1,9 @@
+{{- $opts := dict "type" "typst" "displayMode" (eq .Type "block") }}
+{{- with try (transform.ToMath .Inner $opts) }}
+  {{- with .Err }}
+    {{- errorf "Typst threw error: %s: see %s." . $.Position }}
+  {{- else }}
+    {{- .Value }}
+    {{- $.Page.Store.Set "hasTypstMath" true }}
+  {{- end }}
+{{- end -}}

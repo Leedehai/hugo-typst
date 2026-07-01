@@ -33,7 +33,8 @@ project uses Typst to compile math into
 
 - [x] Add Typst WASM, RPC integration
 - [x] :tada: (MVP) Compile to MathML, happy path
-- [x] MathML diagnostics
+- [ ] MathML diagnostics
+- [ ] Typst package global imports (e.g. [physica](https://github.com/Leedehai/typst-physics))
 - [ ] MathML rendering with CSS stylesheets
 - [ ] (maybe) Compile to SVG?
 
@@ -83,6 +84,9 @@ make test-math
 
 # Run all tests in Hugo.
 make test-all
+
+# Run the end-to-end test only.
+make test-e2e
 ```
 
 ## Usage
@@ -90,20 +94,16 @@ make test-all
 Step 1. As with LaTeX, configure the passthrough, so that Hugo knows
 it needs to send the content between the delimiters to the math renderer
 before sending the file to the Markdown processor.
-```yaml
-# hugo.yaml (or hugo.toml/hugo.json depending on your choice)
-markup:
-  goldmark:
-    extensions:
-      passthrough:
-        delimiters:
-          block:
-          - - $$
-            - $$
-          inline:
-          - - '\('
-            - '\)'
-        enable: true
+```toml
+# hugo.toml
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.extensions]
+      [markup.goldmark.extensions.passthrough]
+        enable = true
+        [markup.goldmark.extensions.passthrough.delimiters]
+          block = [['$$', '$$']]
+          inline = [['\(', '\)'], ['$', '$']]
 ```
 
 Step 2. As with LaTeX, configure the
@@ -111,18 +111,49 @@ Step 2. As with LaTeX, configure the
 that Hugo knows to pass the math content to Typst.
 ```html
 # layouts/_markup/render-passthrough.html
-TODO
+{{- $opts := dict "type" "typst" "displayMode" (eq .Type "block") }}
+{{- with try (transform.ToMath .Inner $opts) }}
+  {{- with .Err }}
+    {{- errorf "Typst threw error: %s: see %s." . $.Position }}
+  {{- else }}
+    {{- .Value }}
+    {{- $.Page.Store.Set "hasTypstMath" true }}
+  {{- end }}
+{{- end -}}
 ```
 
 Step 3. In Markdown files, write your math equation in Typst.
 ```markdown
-TODO
+---
+title: "End-to-end Testing Example"
+---
+
+Literal dollar sign: \$100.
+
+Inline: $E = m c^2$ and same line.
+
+Block:
+
+$$
+integral_a^b f(x) dif x = F(b) - F(a)
+$$
 ```
 
-Step 4. In base template, conditionally include the CSS within the head element:
+Step 4 (optional). In base template, conditionally include the CSS within the
+head element:
 ```html
-TODO
+<head>
+  {{ $noop := .WordCount }}
+  {{ if .Page.Store.Get "hasTypstMath" }}
+    <link rel="stylesheet" ...>
+  {{ end }}
+</head>
 ```
+
+> In the above, note the use of a `noop` statement to force content rendering
+before we check the value of `hasTypstMath` with the `.Page.Store.Get` method.
+This is a known quirk according to
+[Hugo docs](https://gohugo.io/render-hooks/passthrough/#example).
 
 ## Reference: Typst CLI usage
 

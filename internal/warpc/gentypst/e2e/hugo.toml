@@ -1,0 +1,14 @@
+baseURL = "https://example.org"
+title = "Hugo-Typst e2e testing"
+publishDir = "./out"
+cleanDestinationDir = true
+disableKinds = [ "rss", "section", "sitemap", "taxonomy", "term" ]
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.extensions]
+      [markup.goldmark.extensions.passthrough]
+        enable = true
+        [markup.goldmark.extensions.passthrough.delimiters]
+          block = [['$$', '$$']]
+          inline = [['\(', '\)'], ['$', '$']]

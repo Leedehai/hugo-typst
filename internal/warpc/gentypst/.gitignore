@@ -1,2 +1,4 @@
 target/
 Cargo.lock
+.hugo_build.lock
+out/
