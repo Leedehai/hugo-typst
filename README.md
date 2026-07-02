@@ -111,7 +111,7 @@ Step 2. As with LaTeX, configure the
 that Hugo knows to pass the math content to Typst.
 ```html
 # layouts/_markup/render-passthrough.html
-{{- $opts := dict "type" "typst" "displayMode" (eq .Type "block") }}
+{{- $opts := dict "type" "typst" "block" (eq .Type "block") }}
 {{- with try (transform.ToMath .Inner $opts) }}
   {{- with .Err }}
     {{- errorf "Typst threw error: %s: see %s." . $.Position }}

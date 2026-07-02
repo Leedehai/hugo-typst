@@ -68,7 +68,7 @@ fn default_version() -> u16 {
 
 fn compile_to_mathml(request: Request) -> Response {
     let text = if request.data.options.block {
-        format!("$ {} $", request.data.expression)
+        format!("$ {} $", request.data.expression.trim())
     } else {
         format!("${}$", request.data.expression.trim())
     };
